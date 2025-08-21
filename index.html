@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viratswarup</title>
+    <!-- Firebase and Cloudinary SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
+    <style>
+        :root {
+            --dark-red: #8B0000;
+            --medium-red: #A52A2A;
+            --light-red: #DC143C;
+            --dark-bg: #1a1a1a;
+            --light-text: #f2f2f2;
+            --dark-text: #333;
+            --gray: #444;
+            --light-gray: #777;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--dark-bg);
+            color: var(--light-text);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Header Styles */
+        header {
+            background-color: var(--dark-red);
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo {
+            width: 40px;
+            height: 40px;
+            background-color: var(--light-text);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: var(--dark-red);
+        }
+        
+        .site-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .mobile-menu-btn, .language-btn, .back-btn {
+            background: none;
+            border: none;
+            color: var(--light-text);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        /* Navigation */
+        nav {
+            background-color: var(--medium-red);
+            padding: 0.5rem;
+            position: sticky;
+            top: 64px;
+            z-index: 99;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-around;
+        }
+        
+        .nav-item {
+            color: var(--light-text);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+        
+        .nav-item i {
+            font-size: 1.2rem;
+            margin-bottom: 0.2rem;
+        }
+        
+        .nav-item:hover {
+            background-color: var(--light-red);
+        }
+        
+        /* Main Content */
+        main {
+            flex: 1;
+            padding: 2rem 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        /* Welcome Page */
+        .welcome-container {
+            text-align: center;
+            max-width: 500px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: rgba(139, 0, 0, 0.2);
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .welcome-title {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--light-text);
+        }
+        
+        .auth-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: var(--light-red);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .btn-google {
+            background-color: #fff;
+            color: #757575;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-google:hover {
+            background-color: #f5f5f5;
+        }
+        
+        /* Feed Page */
+        .post-form {
+            background-color: rgba(139, 0, 0, 0.1);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        
+        .post-input {
+            width: 100%;
+            min-height: 100px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--gray);
+            border-radius: 4px;
+            background-color: var(--dark-bg);
+            color: var(--light-text);
+            resize: vertical;
+        }
+        
+        .image-upload-btn {
+            background-color: var(--medium-red);
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        
+        .post-submit {
+            background-color: var(--light-red);
+            color: white;
+            padding: 0.7rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .posts-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .post {
+            background-color: rgba(139, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .post-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--medium-red);
+            margin-right: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .post-content {
+            margin-bottom: 1rem;
+        }
+        
+        .post-image {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .post-actions {
+            display: flex;
+            gap: 1rem;
+            border-top: 1px solid var(--gray);
+            padding-top: 1rem;
+        }
+        
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--light-text);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+        
+        .action-btn:hover {
+            opacity: 1;
+        }
+        
+        /* Other Pages */
+        .page-content {
+            padding: 1.5rem;
+            background-color: rgba(139, 0, 0, 0.1);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .page-title {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--light-red);
+        }
+        
+        /* Mobile Menu */
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 80%;
+            height: 100vh;
+            background-color: var(--dark-red);
+            z-index: 1000;
+            transition: left 0.3s ease;
+            padding: 2rem;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .mobile-menu.active {
+            left: 0;
+        }
+        
+        .mobile-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .close-menu {
+            background: none;
+            border: none;
+            color: var(--light-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .mobile-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .mobile-nav-item {
+            color: var(--light-text);
+            text-decoration: none;
+            padding: 1rem;
+            border-radius: 4px;
+            background-color: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .mobile-nav-item i {
+            font-size: 1.2rem;
+            width: 24px;
+        }
+        
+        /* Language Popup */
+        .language-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1001;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        
+        .language-popup.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .language-content {
+            background-color: var(--dark-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .language-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .close-language {
+            background: none;
+            border: none;
+            color: var(--light-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .language-options {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .language-option {
+            padding: 1rem;
+            background-color: var(--gray);
+            border: none;
+            border-radius: 4px;
+            color: var(--light-text);
+            cursor: pointer;
+            text-align: left;
+            transition: background-color 0.3s;
+        }
+        
+        .language-option:hover {
+            background-color: var(--medium-red);
+        }
+        
+        /* Footer */
+        footer {
+            background-color: var(--dark-red);
+            padding: 2rem 1rem;
+            margin-top: auto;
+        }
+        
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .footer-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .footer-section h3 {
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .footer-links-list {
+            list-style: none;
+        }
+        
+        .footer-links-list li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .footer-links-list a {
+            color: var(--light-text);
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+        
+        .footer-links-list a:hover {
+            opacity: 1;
+        }
+        
+        .footer-bottom {
+            text-align: center;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Responsive Design */
+        @media (min-width: 768px) {
+            .nav-item {
+                flex-direction: row;
+                gap: 0.5rem;
+                font-size: 1rem;
+            }
+            
+            .auth-buttons {
+                flex-direction: row;
+                justify-content: center;
+            }
+            
+            .mobile-menu {
+                width: 300px;
+            }
+        }
+        
+        /* Utility Classes */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <div class="logo-container">
+                <button class="back-btn">←</button>
+                <div class="logo">V</div>
+                <div class="site-title" data-i18n="siteTitle">Viratswarup</div>
+            </div>
+            <div class="header-controls">
+                <button class="language-btn" id="languageBtn">🌐</button>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="nav-item" data-page="home">
+                <i>🏠</i>
+                <span data-i18n="home">Home</span>
+            </a>
+            <a href="#" class="nav-item" data-page="enigma">
+                <i>🔍</i>
+                <span data-i18n="enigma">Enigma</span>
+            </a>
+            <a href="#" class="nav-item" data-page="feed">
+                <i>📝</i>
+                <span data-i18n="feed">Feed</span>
+            </a>
+            <a href="#" class="nav-item" data-page="agnosia">
+                <i>❓</i>
+                <span data-i18n="agnosia">Agnosia</span>
+            </a>
+            <a href="#" class="nav-item" data-page="emulate">
+                <i>🔄</i>
+                <span data-i18n="emulate">Emulate</span>
+            </a>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main>
+        <!-- Welcome/Login Page -->
+        <section id="welcome-page" class="page active">
+            <div class="welcome-container">
+                <h1 class="welcome-title" data-i18n="welcomeTitle">Welcome to Viratswarup</h1>
+                <p data-i18n="welcomeMessage">Join our community to share your thoughts, connect with others, and explore interesting content.</p>
+                <div class="auth-buttons">
+                    <button class="btn btn-primary" id="loginBtn" data-i18n="login">Login</button>
+                    <button class="btn btn-google" id="googleLoginBtn">
+                        <span data-i18n="googleSignIn">Sign in with Google</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Feed Page -->
+        <section id="feed-page" class="page">
+            <h2 class="page-title" data-i18n="communityFeed">Community Feed</h2>
+            <div class="post-form">
+                <textarea class="post-input" placeholder="What's on your mind?" data-i18n-placeholder="postPlaceholder"></textarea>
+                <div class="image-upload-btn" id="uploadImageBtn" data-i18n="uploadImage">Upload Image</div>
+                <button class="post-submit" data-i18n="post">Post</button>
+            </div>
+            <div class="posts-container">
+                <!-- Posts will be loaded here dynamically -->
+            </div>
+        </section>
+        
+        <!-- Other Pages -->
+        <section id="enigma-page" class="page">
+            <div class="page-content">
+                <h2 class="page-title" data-i18n="enigma">Enigma</h2>
+                <p data-i18n="enigmaContent">This is the Enigma section. Content will be displayed here.</p>
+            </div>
+        </section>
+        
+        <section id="agnosia-page" class="page">
+            <div class="page-content">
+                <h2 class="page-title" data-i18n="agnosia">Agnosia</h2>
+                <p data-i18n="agnosiaContent">This is the Agnosia section. Content will be displayed here.</p>
+            </div>
+        </section>
+        
+        <section id="emulate-page" class="page">
+            <div class="page-content">
+                <h2 class="page-title" data-i18n="emulate">Emulate</h2>
+                <p data-i18n="emulateContent">This is the Emulate section. Content will be displayed here.</p>
+            </div>
+        </section>
+        
+        <section id="profile-page" class="page">
+            <div class="page-content">
+                <h2 class="page-title" data-i18n="profile">Profile</h2>
+                <p data-i18n="profileContent">User profile information will be displayed here.</p>
+            </div>
+        </section>
+        
+        <section id="settings-page" class="page">
+            <div class="page-content">
+                <h2 class="page-title" data-i18n="settings">Settings</h2>
+                <p data-i18n="settingsContent">User settings will be displayed here.</p>
+            </div>
+        </section>
+        
+        <section id="latest-page" class="page">
+            <div class="page-content">
+                <h2 class="page-title" data-i18n="latestUpdates">Latest Updates</h2>
+                <p data-i18n="latestContent">Latest updates will be displayed here.</p>
+            </div>
+        </section>
+        
+        <section id="about-page" class="page">
+            <div class="page-content">
+                <h2 class="page-title" data-i18n="aboutUs">About Us</h2>
+                <p data-i18n="aboutContent">Information about Viratswarup will be displayed here.</p>
+            </div>
+        </section>
+        
+        <section id="contact-page" class="page">
+            <div class="page-content">
+                <h2 class="page-title" data-i18n="contactUs">Contact Us</h2>
+                <p data-i18n="contactContent">Contact information and form will be displayed here.</p>
+            </div>
+        </section>
+    </main>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <h2 data-i18n="menu">Menu</h2>
+            <button class="close-menu" id="closeMenuBtn">✕</button>
+        </div>
+        <nav class="mobile-nav">
+            <a href="#" class="mobile-nav-item" data-page="home">
+                <i>🏠</i>
+                <span data-i18n="home">Home</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="enigma">
+                <i>🔍</i>
+                <span data-i18n="enigma">Enigma</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="agnosia">
+                <i>❓</i>
+                <span data-i18n="agnosia">Agnosia</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="emulate">
+                <i>🔄</i>
+                <span data-i18n="emulate">Emulate</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="feed">
+                <i>📝</i>
+                <span data-i18n="feed">Feed</span>
+            </a>
+            <a href="#" class="mobile-nav-item" id="mobileLanguageBtn">
+                <i>🌐</i>
+                <span data-i18n="switchLanguage">Switch Language</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="profile">
+                <i>👤</i>
+                <span data-i18n="profile">Profile</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="settings">
+                <i>⚙️</i>
+                <span data-i18n="settings">Settings</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="latest">
+                <i>🆕</i>
+                <span data-i18n="latestUpdates">Latest Updates</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="about">
+                <i>ℹ️</i>
+                <span data-i18n="aboutUs">About</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-page="contact">
+                <i>📞</i>
+                <span data-i18n="contactUs">Contact</span>
+            </a>
+        </nav>
+    </div>
+    
+    <!-- Language Popup -->
+    <div class="language-popup" id="languagePopup">
+        <div class="language-content">
+            <div class="language-header">
+                <h2 data-i18n="selectLanguage">Select Language</h2>
+                <button class="close-language" id="closeLanguageBtn">✕</button>
+            </div>
+            <div class="language-options">
+                <button class="language-option" data-lang="en">English</button>
+                <button class="language-option" data-lang="hi">Hindi</button>
+                <button class="language-option" data-lang="ne">Nepali</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <div class="footer-links">
+                <div class="footer-section">
+                    <h3 data-i18n="explore">Explore</h3>
+                    <ul class="footer-links-list">
+                        <li><a href="#" data-page="home" data-i18n="home">Home</a></li>
+                        <li><a href="#" data-page="enigma" data-i18n="enigma">Enigma</a></li>
+                        <li><a href="#" data-page="agnosia" data-i18n="agnosia">Agnosia</a></li>
+                        <li><a href="#" data-page="emulate" data-i18n="emulate">Emulate</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3 data-i18n="account">Account</h3>
+                    <ul class="footer-links-list">
+                        <li><a href="#" data-page="profile" data-i18n="profile">Profile</a></li>
+                        <li><a href="#" data-page="settings" data-i18n="settings">Settings</a></li>
+                        <li><a href="#" data-page="feed" data-i18n="feed">Feed</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3 data-i18n="company">Company</h3>
+                    <ul class="footer-links-list">
+                        <li><a href="#" data-page="about" data-i18n="aboutUs">About Us</a></li>
+                        <li><a href="#" data-page="latest" data-i18n="latestUpdates">Latest Updates</a></li>
+                        <li><a href="#" data-page="contact" data-i18n="contactUs">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p data-i18n="copyright">&copy; 2023 Viratswarup. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Firebase configuration (replace with your actual config)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        // Cloudinary configuration (replace with your actual config)
+        const cloudinaryWidget = window.cloudinary.createUploadWidget({
+            cloudName: "YOUR_CLOUD_NAME",
+            uploadPreset: "YOUR_UPLOAD_PRESET"
+        }, (error, result) => {
+            if (!error && result && result.event === "success") {
+                console.log("Uploaded image URL: ", result.info.secure_url);
+                // Store the image URL for later use when creating a post
+                document.getElementById("uploadImageBtn").setAttribute("data-image-url", result.info.secure_url);
+            }
+        });
+        
+        // Translation system
+        const translations = {
+            en: {
+                siteTitle: "Viratswarup",
+                home: "Home",
+                enigma: "Enigma",
+                feed: "Feed",
+                agnosia: "Agnosia",
+                emulate: "Emulate",
+                welcomeTitle: "Welcome to Viratswarup",
+                welcomeMessage: "Join our community to share your thoughts, connect with others, and explore interesting content.",
+                login: "Login",
+                googleSignIn: "Sign in with Google",
+                communityFeed: "Community Feed",
+                postPlaceholder: "What's on your mind?",
+                uploadImage: "Upload Image",
+                post: "Post",
+                enigmaContent: "This is the Enigma section. Content will be displayed here.",
+                agnosiaContent: "This is the Agnosia section. Content will be displayed here.",
+                emulateContent: "This is the Emulate section. Content will be displayed here.",
+                profile: "Profile",
+                profileContent: "User profile information will be displayed here.",
+                settings: "Settings",
+                settingsContent: "User settings will be displayed here.",
+                latestUpdates: "Latest Updates",
+                latestContent: "Latest updates will be displayed here.",
+                aboutUs: "About Us",
+                aboutContent: "Information about Viratswarup will be displayed here.",
+                contactUs: "Contact Us",
+                contactContent: "Contact information and form will be displayed here.",
+                menu: "Menu",
+                switchLanguage: "Switch Language",
+                selectLanguage: "Select Language",
+                explore: "Explore",
+                account: "Account",
+                company: "Company",
+                copyright: "© 2023 Viratswarup. All rights reserved."
+            },
+            hi: {
+                siteTitle: "विराटस्वरूप",
+                home: "होम",
+                enigma: "एनिग्मा",
+                feed: "फ़ीड",
+                agnosia: "अग्नोसिया",
+                emulate: "अनुकरण",
+                welcomeTitle: "विराटस्वरूप में आपका स्वागत है",
+                welcomeMessage: "अपने विचार साझा करने, दूसरों से जुड़ने और दिलचस्प सामग्री का पता लगाने के लिए हमारे समुदाय में शामिल हों।",
+                login: "लॉग इन",
+                googleSignIn: "Google से साइन इन करें",
+                communityFeed: "समुदाय फ़ीड",
+                postPlaceholder: "आपके मन में क्या चल रहा है?",
+                uploadImage: "छवि अपलोड",
+                post: "पोस्ट",
+                enigmaContent: "यह एनिग्मा अनुभाग है। सामग्री यहां प्रदर्शित की जाएगी।",
+                agnosiaContent: "यह अग्नोसिया अनुभाग है। सामग्री यहां प्रदर्शित की जाएगी।",
+                emulateContent: "यह अनुकरण अनुभाग है। सामग्री यहां प्रदर्शित की जाएगी।",
+                profile: "प्रोफाइल",
+                profileContent: "उपयोगकर्ता प्रोफ़ाइल जानकारी यहां प्रदर्शित की जाएगी।",
+                settings: "सेटिंग्स",
+                settingsContent: "उपयोगकर्ता सेटिंग्स यहां प्रदर्शित की जाएगी।",
+                latestUpdates: "नवीनतम अपडेट",
+                latestContent: "नवीनतम अपडेट यहां प्रदर्शित किए जाएंगे।",
+                aboutUs: "हमारे बारे में",
+                aboutContent: "विराटस्वरूप के बारे में जानकारी यहां प्रदर्शित की जाएगी।",
+                contactUs: "संपर्क करें",
+                contactContent: "संपर्क जानकारी और फ़ॉर्म यहां प्रदर्शित किया जाएगा।",
+                menu: "मेनू",
+                switchLanguage: "भाषा बदलें",
+                selectLanguage: "भाषा चुनें",
+                explore: "अन्वेषण",
+                account: "खाता",
+                company: "कंपनी",
+                copyright: "© 2023 विराटस्वरूप। सर्वाधिकार सुरक्षित।"
+            },
+            ne: {
+                siteTitle: "विराटस्वरूप",
+                home: "गृह",
+                enigma: "एनिग्मा",
+                feed: "फिड",
+                agnosia: "अग्नोसिया",
+                emulate: "अनुकरण",
+                welcomeTitle: "विराटस्वरूपमा स्वागत छ",
+                welcomeMessage: "आफ्ना विचारहरू साझा गर्न, अरूसँग जडान गर्न र रोचक सामग्रीहरू अन्वेषण गर्न हाम्रो समुदायमा सामेल हुनुहोस्।",
+                login: "लग इन",
+                googleSignIn: "Google मार्फत साइन इन गर्नुहोस्",
+                communityFeed: "समुदाय फिड",
+                postPlaceholder: "तपाईको मनमा के छ?",
+                uploadImage: "तस्विर अपलोड गर्नुहोस्",
+                post: "पोस्ट",
+                enigmaContent: "यो एनिग्मा खण्ड हो। सामग्री यहाँ प्रदर्शन गरिनेछ।",
+                agnosiaContent: "यो अग्नोसिया खण्ड हो। सामग्री यहाँ प्रदर्शन गरिनेछ।",
+                emulateContent: "यो अनुकरण खण्ड हो। सामग्री यहाँ प्रदर्शन गरिनेछ।",
+                profile: "प्रोफाइल",
+                profileContent: "प्रयोगकर्ता प्रोफाइल जानकारी यहाँ प्रदर्शन गरिनेछ।",
+                settings: "सेटिङहरू",
+                settingsContent: "प्रयोगकर्ता सेटिङहरू यहाँ प्रदर्शन गरिनेछ।",
+                latestUpdates: "नवीनतम अपडेटहरू",
+                latestContent: "नवीनतम अपडेटहरू यहाँ प्रदर्शन गरिनेछ।",
+                aboutUs: "हाम्रो बारेमा",
+                aboutContent: "विराटस्वरूपको बारेमा जानकारी यहाँ प्रदर्शन गरिनेछ।",
+                contactUs: "हामीलाई सम्पर्क गर्नुहोस्",
+                contactContent: "सम्पर्क जानकारी र फारम यहाँ प्रदर्शन गरिनेछ।",
+                menu: "मेनु",
+                switchLanguage: "भाषा परिवर्तन गर्नुहोस्",
+                selectLanguage: "भाषा चयन गर्नुहोस्",
+                explore: "अन्वेषण",
+                account: "खाता",
+                company: "कम्पनी",
+                copyright: "© २०२३ विराटस्वरूप। सर्वाधिकार सुरक्षित।"
+            }
+        };
+
+        // Set the default language
+        let currentLanguage = 'en';
+        
+        // Function to change language
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            
+            // Update all elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+            
+            // Update all placeholder elements with data-i18n-placeholder attribute
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+                const key = element.getAttribute('data-i18n-placeholder');
+                if (translations[lang][key]) {
+                    element.placeholder = translations[lang][key];
+                }
+            });
+            
+            // Save language preference to localStorage
+            localStorage.setItem('preferredLanguage', lang);
+        }
+        
+        // DOM Elements
+        const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+        const closeMenuBtn = document.getElementById("closeMenuBtn");
+        const mobileMenu = document.getElementById("mobileMenu");
+        const languageBtn = document.getElementById("languageBtn");
+        const mobileLanguageBtn = document.getElementById("mobileLanguageBtn");
+        const closeLanguageBtn = document.getElementById("closeLanguageBtn");
+        const languagePopup = document.getElementById("languagePopup");
+        const pages = document.querySelectorAll(".page");
+        const navItems = document.querySelectorAll(".nav-item, .mobile-nav-item, .footer-links-list a");
+        const loginBtn = document.getElementById("loginBtn");
+        const googleLoginBtn = document.getElementById("googleLoginBtn");
+        const uploadImageBtn = document.getElementById("uploadImageBtn");
+        
+        // Show mobile menu
+        mobileMenuBtn.addEventListener("click", () => {
+            mobileMenu.classList.add("active");
+        });
+        
+        // Hide mobile menu
+        closeMenuBtn.addEventListener("click", () => {
+            mobileMenu.classList.remove("active");
+        });
+        
+        // Show language popup
+        languageBtn.addEventListener("click", () => {
+            languagePopup.classList.add("active");
+        });
+        
+        mobileLanguageBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            mobileMenu.classList.remove("active");
+            languagePopup.classList.add("active");
+        });
+        
+        // Hide language popup
+        closeLanguageBtn.addEventListener("click", () => {
+            languagePopup.classList.remove("active");
+        });
+        
+        // Change language
+        const languageOptions = document.querySelectorAll(".language-option");
+        languageOptions.forEach(option => {
+            option.addEventListener("click", () => {
+                const selectedLang = option.getAttribute("data-lang");
+                changeLanguage(selectedLang);
+                languagePopup.classList.remove("active");
+            });
+        });
+        
+        // Navigation between pages
+        navItems.forEach(item => {
+            item.addEventListener("click", (e) => {
+                e.preventDefault();
+                const pageId = item.getAttribute("data-page");
+                showPage(pageId);
+                
+                // Close mobile menu if open
+                if (mobileMenu.classList.contains("active")) {
+                    mobileMenu.classList.remove("active");
+                }
+            });
+        });
+        
+        // Show specific page
+        function showPage(pageId) {
+            pages.forEach(page => {
+                page.classList.remove("active");
+            });
+            
+            document.getElementById(`${pageId}-page`).classList.add("active");
+            
+            // If user is not authenticated and trying to access protected pages
+            if (pageId !== "welcome" && !auth.currentUser) {
+                showPage("welcome");
+                alert("Please login first");
+                return;
+            }
+        }
+        
+        // Firebase Authentication
+        loginBtn.addEventListener("click", () => {
+            // Implement email/password login
+            alert("Email/password login would be implemented here");
+        });
+        
+        googleLoginBtn.addEventListener("click", () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    // User signed in
+                    showPage("feed");
+                })
+                .catch((error) => {
+                    console.error("Authentication error: ", error);
+                });
+        });
+        
+        // Check auth state
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                showPage("feed");
+            } else {
+                showPage("welcome");
+            }
+        });
+        
+        // Cloudinary image upload
+        uploadImageBtn.addEventListener("click", () => {
+            cloudinaryWidget.open();
+        });
+        
+        // Create a new post
+        const postSubmitBtn = document.querySelector(".post-submit");
+        if (postSubmitBtn) {
+            postSubmitBtn.addEventListener("click", () => {
+                const postText = document.querySelector(".post-input").value;
+                const imageUrl = uploadImageBtn.getAttribute("data-image-url");
+                
+                if (!postText.trim() && !imageUrl) {
+                    alert("Please add text or an image to your post");
+                    return;
+                }
+                
+                // Add post to Firestore
+                db.collection("posts").add({
+                    text: postText,
+                    imageUrl: imageUrl || null,
+                    userId: auth.currentUser.uid,
+                    userDisplayName: auth.currentUser.displayName,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    likes: 0,
+                    dislikes: 0,
+                    comments: []
+                })
+                .then(() => {
+                    document.querySelector(".post-input").value = "";
+                    uploadImageBtn.removeAttribute("data-image-url");
+                    alert("Post created successfully!");
+                    loadPosts();
+                })
+                .catch(error => {
+                    console.error("Error creating post: ", error);
+                });
+            });
+        }
+        
+        // Load posts from Firestore
+        function loadPosts() {
+            const postsContainer = document.querySelector(".posts-container");
+            postsContainer.innerHTML = "<p>Loading posts...</p>";
+            
+            db.collection("posts")
+                .orderBy("timestamp", "desc")
+                .get()
+                .then(querySnapshot => {
+                    postsContainer.innerHTML = "";
+                    
+                    if (querySnapshot.empty) {
+                        postsContainer.innerHTML = "<p>No posts yet. Be the first to post!</p>";
+                        return;
+                    }
+                    
+                    querySnapshot.forEach(doc => {
+                        const post = doc.data();
+                        const postElement = document.createElement("div");
+                        postElement.className = "post";
+                        
+                        postElement.innerHTML = `
+                            <div class="post-header">
+                                <div class="user-avatar">${post.userDisplayName ? post.userDisplayName.charAt(0).toUpperCase() : "U"}</div>
+                                <div>
+                                    <div class="user-name">${post.userDisplayName || "Unknown User"}</div>
+                                    <div class="post-time">${post.timestamp ? new Date(post.timestamp.toDate()).toLocaleString() : ""}</div>
+                                </div>
+                            </div>
+                            <div class="post-content">
+                                <p>${post.text || ""}</p>
+                                ${post.imageUrl ? `<img src="${post.imageUrl}" class="post-image" alt="Post image">` : ""}
+                            </div>
+                            <div class="post-actions">
+                                <button class="action-btn like-btn" data-id="${doc.id}">
+                                    <i>👍</i> <span>${post.likes || 0}</span>
+                                </button>
+                                <button class="action-btn dislike-btn" data-id="${doc.id}">
+                                    <i>👎</i> <span>${post.dislikes || 0}</span>
+                                </button>
+                                <button class="action-btn comment-btn" data-id="${doc.id}">
+                                    <i>💬</i> Comment
+                                </button>
+                                <button class="action-btn share-btn" data-id="${doc.id}">
+                                    <i>↗️</i> Share
+                                </button>
+                            </div>
+                        `;
+                        
+                        postsContainer.appendChild(postElement);
+                    });
+                    
+                    // Add event listeners to action buttons
+                    document.querySelectorAll(".like-btn").forEach(btn => {
+                        btn.addEventListener("click", () => likePost(btn.getAttribute("data-id")));
+                    });
+                    
+                    document.querySelectorAll(".dislike-btn").forEach(btn => {
+                        btn.addEventListener("click", () => dislikePost(btn.getAttribute("data-id")));
+                    });
+                })
+                .catch(error => {
+                    console.error("Error loading posts: ", error);
+                    postsContainer.innerHTML = "<p>Error loading posts. Please try again later.</p>";
+                });
+        }
+        
+        // Like a post
+        function likePost(postId) {
+            if (!auth.currentUser) {
+                alert("Please login to like posts");
+                return;
+            }
+            
+            const postRef = db.collection("posts").doc(postId);
+            postRef.update({
+                likes: firebase.firestore.FieldValue.increment(1)
+            })
+            .then(() => {
+                loadPosts();
+            })
+            .catch(error => {
+                console.error("Error liking post: ", error);
+            });
+        }
+        
+        // Dislike a post
+        function dislikePost(postId) {
+            if (!auth.currentUser) {
+                alert("Please login to dislike posts");
+                return;
+            }
+            
+            const postRef = db.collection("posts").doc(postId);
+            postRef.update({
+                dislikes: firebase.firestore.FieldValue.increment(1)
+            })
+            .then(() => {
+                loadPosts();
+            })
+            .catch(error => {
+                console.error("Error disliking post: ", error);
+            });
+        }
+        
+        // Load posts when feed page is shown
+        document.addEventListener("click", (e) => {
+            if (e.target && (e.target.getAttribute("data-page") === "feed" || 
+                (e.target.parentElement && e.target.parentElement.getAttribute("data-page") === "feed"))) {
+                if (auth.currentUser) {
+                    loadPosts();
+                }
+            }
+        });
+        
+        // Initialize the app
+        document.addEventListener("DOMContentLoaded", () => {
+            // Check if user is logged in
+            if (auth.currentUser) {
+                showPage("feed");
+            } else {
+                showPage("welcome");
+            }
+            
+            // Load language preference from localStorage if available
+            const savedLanguage = localStorage.getItem('preferredLanguage');
+            if (savedLanguage && translations[savedLanguage]) {
+                changeLanguage(savedLanguage);
+            }
+        });
+    </script>
+</body>
+</html>
