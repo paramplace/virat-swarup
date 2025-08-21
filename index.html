@@ -754,15 +754,27 @@
     </footer>
 
     <script>
-        // Firebase configuration (replace with your actual config)
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "your-project.firebaseapp.com",
-            projectId: "your-project",
-            storageBucket: "your-project.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
+       // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDxiCFfRl2uufSgLfwdbRZxAszYLxSzp0Y",
+  authDomain: "virat-swarup-app.firebaseapp.com",
+  projectId: "virat-swarup-app",
+  storageBucket: "virat-swarup-app.firebasestorage.app",
+  messagingSenderId: "82049608789",
+  appId: "1:82049608789:web:1d011a2ac3f3936a9ff8dc",
+  measurementId: "G-80WZV7RDL7"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
         
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
