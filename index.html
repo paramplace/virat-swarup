@@ -4,51 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viratswarup</title>
-    <!-- Firebase and Cloudinary SDKs -->
-    <script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, orderBy, query, onSnapshot, updateDoc, doc, increment } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-        
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDxiCFfRl2uufSgLfwdbRZxAszYLxSzp0Y",
-            authDomain: "virat-swarup-app.firebaseapp.com",
-            projectId: "virat-swarup-app",
-            storageBucket: "virat-swarup-app.firebasestorage.app",
-            messagingSenderId: "82049608789",
-            appId: "1:82049608789:web:1d011a2ac3f3936a9ff8dc",
-            measurementId: "G-80WZV7RDL7"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        
-        // Make Firebase available globally
-        window.firebase = {
-            auth,
-            db,
-            GoogleAuthProvider,
-            signInWithPopup,
-            collection,
-            addDoc,
-            serverTimestamp,
-            orderBy,
-            query,
-            onSnapshot,
-            updateDoc,
-            doc,
-            increment
-        };
-    </script>
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <!-- Firebase Analytics -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
+    <!-- Firebase Auth -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <!-- Cloudinary SDK -->
     <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
     <style>
-        /* Your existing CSS styles */
         :root {
             --dark-red: #8B0000;
             --medium-red: #A52A2A;
@@ -300,6 +266,7 @@
             display: flex;
             align-items: center;
             margin-bottom: 1rem;
+            gap: 10px;
         }
         
         .user-avatar {
@@ -307,7 +274,6 @@
             height: 40px;
             border-radius: 50%;
             background-color: var(--medium-red);
-            margin-right: 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -320,6 +286,8 @@
         
         .post-image {
             width: 100%;
+            max-height: 300px;
+            object-fit: cover;
             border-radius: 8px;
             margin-bottom: 1rem;
         }
@@ -556,6 +524,35 @@
         .hidden {
             display: none;
         }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--light-gray);
+        }
+        
+        .error-message {
+            background-color: var(--light-red);
+            color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logout-btn {
+            background: none;
+            border: 1px solid var(--light-text);
+            color: var(--light-text);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -569,6 +566,10 @@
             </div>
             <div class="header-controls">
                 <button class="language-btn" id="languageBtn">🌐</button>
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <span id="userName"></span>
+                    <button class="logout-btn" id="logoutBtn">Logout</button>
+                </div>
                 <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
             </div>
         </div>
@@ -622,10 +623,11 @@
             <div class="post-form">
                 <textarea class="post-input" placeholder="What's on your mind?" data-i18n-placeholder="postPlaceholder"></textarea>
                 <div class="image-upload-btn" id="uploadImageBtn" data-i18n="uploadImage">Upload Image</div>
-                <button class="post-submit" data-i18n="post">Post</button>
+                <div id="imagePreview" class="hidden"></div>
+                <button class="post-submit" id="postSubmitBtn" data-i18n="post">Post</button>
             </div>
-            <div class="posts-container">
-                <!-- Posts will be loaded here dynamically -->
+            <div class="posts-container" id="postsContainer">
+                <div class="loading" data-i18n="loadingPosts">Loading posts...</div>
             </div>
         </section>
         
@@ -738,6 +740,10 @@
                 <i>📞</i>
                 <span data-i18n="contactUs">Contact</span>
             </a>
+            <a href="#" class="mobile-nav-item" id="mobileLogoutBtn" style="display: none;">
+                <i>🚪</i>
+                <span data-i18n="logout">Logout</span>
+            </a>
         </nav>
     </div>
     
@@ -793,345 +799,405 @@
     </footer>
 
     <script>
-        // Wait for Firebase to be loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            // Cloudinary configuration (replace with your actual config)
-            const cloudinaryWidget = window.cloudinary.createUploadWidget({
-                cloudName: "YOUR_CLOUD_NAME",
-                uploadPreset: "YOUR_UPLOAD_PRESET"
-            }, (error, result) => {
-                if (!error && result && result.event === "success") {
-                    console.log("Uploaded image URL: ", result.info.secure_url);
-                    // Store the image URL for later use when creating a post
-                    document.getElementById("uploadImageBtn").setAttribute("data-image-url", result.info.secure_url);
-                }
-            });
-            
-            // Translation system
-            const translations = {
-                en: {
-                    siteTitle: "Viratswarup",
-                    home: "Home",
-                    enigma: "Enigma",
-                    feed: "Feed",
-                    agnosia: "Agnosia",
-                    emulate: "Emulate",
-                    welcomeTitle: "Welcome to Viratswarup",
-                    welcomeMessage: "Join our community to share your thoughts, connect with others, and explore interesting content.",
-                    login: "Login",
-                    googleSignIn: "Sign in with Google",
-                    communityFeed: "Community Feed",
-                    postPlaceholder: "What's on your mind?",
-                    uploadImage: "Upload Image",
-                    post: "Post",
-                    enigmaContent: "This is the Enigma section. Content will be displayed here.",
-                    agnosiaContent: "This is the Agnosia section. Content will be displayed here.",
-                    emulateContent: "This is the Emulate section. Content will be displayed here.",
-                    profile: "Profile",
-                    profileContent: "User profile information will be displayed here.",
-                    settings: "Settings",
-                    settingsContent: "User settings will be displayed here.",
-                    latestUpdates: "Latest Updates",
-                    latestContent: "Latest updates will be displayed here.",
-                    aboutUs: "About Us",
-                    aboutContent: "Information about Viratswarup will be displayed here.",
-                    contactUs: "Contact Us",
-                    contactContent: "Contact information and form will be displayed here.",
-                    menu: "Menu",
-                    switchLanguage: "Switch Language",
-                    selectLanguage: "Select Language",
-                    explore: "Explore",
-                    account: "Account",
-                    company: "Company",
-                    copyright: "© 2023 Viratswarup. All rights reserved."
-                },
-                hi: {
-                    siteTitle: "विराटस्वरूप",
-                    home: "होम",
-                    enigma: "एनिग्मा",
-                    feed: "फ़ीड",
-                    agnosia: "अग्नोसिया",
-                    emulate: "अनुकरण",
-                    welcomeTitle: "विराटस्वरूप में आपका स्वागत है",
-                    welcomeMessage: "अपने विचार साझा करने, दूसरों से जुड़ने और दिलचस्प सामग्री का पता लगाने के लिए हमारे समुदाय में शामिल हों।",
-                    login: "लॉग इन",
-                    googleSignIn: "Google से साइन इन करें",
-                    communityFeed: "समुदाय फ़ीड",
-                    postPlaceholder: "आपके मन में क्या चल रहा है?",
-                    uploadImage: "छवि अपलोड",
-                    post: "पोस्ट",
-                    enigmaContent: "यह एनिग्मा अनुभाग है। सामग्री यहां प्रदर्शित की जाएगी।",
-                    agnosiaContent: "यह अग्नोसिया अनुभाग है। सामग्री यहां प्रदर्शित की जाएगी।",
-                    emulateContent: "यह अनुकरण अनुभाग है। सामग्री यहां प्रदर्शित की जाएगी।",
-                    profile: "प्रोफाइल",
-                    profileContent: "उपयोगकर्ता प्रोफ़ाइल जानकारी यहां प्रदर्शित की जाएगी।",
-                    settings: "सेटिंग्स",
-                    settingsContent: "उपयोगकर्ता सेटिंग्स यहां प्रदर्शित की जाएगी।",
-                    latestUpdates: "नवीनतम अपडेट",
-                    latestContent: "नवीनतम अपडेट यहां प्रदर्शित किए जाएंगे।",
-                    aboutUs: "हमारे बारे में",
-                    aboutContent: "विराटस्वरूप के बारे में जानकारी यहां प्रदर्शित की जाएगी।",
-                    contactUs: "संपर्क करें",
-                    contactContent: "संपर्क जानकारी और फ़ॉर्म यहां प्रदर्शित किया जाएगा।",
-                    menu: "मेनू",
-                    switchLanguage: "भाषा बदलें",
-                    selectLanguage: "भाषा चुनें",
-                    explore: "अन्वेषण",
-                    account: "खाता",
-                    company: "कंपनी",
-                    copyright: "© 2023 विराटस्वरूप। सर्वाधिकार सुरक्षित।"
-                },
-                ne: {
-                    siteTitle: "विराटस्वरूप",
-                    home: "गृह",
-                    enigma: "एनिग्मा",
-                    feed: "फिड",
-                    agnosia: "अग्नोसिया",
-                    emulate: "अनुकरण",
-                    welcomeTitle: "विराटस्वरूपमा स्वागत छ",
-                    welcomeMessage: "आफ्ना विचारहरू साझा गर्न, अरूसँग जडान गर्न र रोचक सामग्रीहरू अन्वेषण गर्न हाम्रो समुदायमा सामेल हुनुहोस्।",
-                    login: "लग इन",
-                    googleSignIn: "Google मार्फत साइन इन गर्नुहोस्",
-                    communityFeed: "समुदाय फिड",
-                    postPlaceholder: "तपाईको मनमा के छ?",
-                    uploadImage: "तस्विर अपलोड गर्नुहोस्",
-                    post: "पोस्ट",
-                    enigmaContent: "यो एनिग्मा खण्ड हो। सामग्री यहाँ प्रदर्शन गरिनेछ।",
-                    agnosiaContent: "यो अग्नोसिया खण्ड हो। सामग्री यहाँ प्रदर्शन गरिनेछ।",
-                    emulateContent: "यो अनुकरण खण्ड हो। सामग्री यहाँ प्रदर्शन गरिनेछ।",
-                    profile: "प्रोफाइल",
-                    profileContent: "प्रयोगकर्ता प्रोफाइल जानकारी यहाँ प्रदर्शन गरिनेछ।",
-                    settings: "सेटिङहरू",
-                    settingsContent: "प्रयोगकर्ता सेटिङहरू यहाँ प्रदर्शन गरिनेछ।",
-                    latestUpdates: "नवीनतम अपडेटहरू",
-                    latestContent: "नवीनतम अपडेटहरू यहाँ प्रदर्शन गरिनेछ।",
-                    aboutUs: "हाम्रो बारेमा",
-                    aboutContent: "विराटस्वरूपको बारेमा जानकारी यहाँ प्रदर्शन गरिनेछ।",
-                    contactUs: "हामीलाई सम्पर्क गर्नुहोस्",
-                    contactContent: "सम्पर्क जानकारी र फारम यहाँ प्रदर्शन गरिनेछ।",
-                    menu: "मेनु",
-                    switchLanguage: "भाषा परिवर्तन गर्नुहोस्",
-                    selectLanguage: "भाषा चयन गर्नुहोस्",
-                    explore: "अन्वेषण",
-                    account: "खाता",
-                    company: "कम्पनी",
-                    copyright: "© २०२३ विराटस्वरूप। सर्वाधिकार सुरक्षित।"
-                }
-            };
-
-            // Set the default language
-            let currentLanguage = 'en';
-            
-            // Function to change language
-            function changeLanguage(lang) {
-                currentLanguage = lang;
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxiCFfRl2uufSgLfwdbRZxAszYLxSzp0Y",
+            authDomain: "virat-swarup-app.firebaseapp.com",
+            projectId: "virat-swarup-app",
+            storageBucket: "virat-swarup-app.firebasestorage.app",
+            messagingSenderId: "82049608789",
+            appId: "1:82049608789:web:1d011a2ac3f3936a9ff8dc",
+            measurementId: "G-80WZV7RDL7"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const analytics = firebase.analytics();
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        // Cloudinary configuration (replace with your actual config)
+        const cloudinaryWidget = window.cloudinary.createUploadWidget({
+            cloudName: "demo", // Replace with your Cloudinary cloud name
+            uploadPreset: "w3itpbnl" // Replace with your upload preset
+        }, (error, result) => {
+            if (!error && result && result.event === "success") {
+                console.log("Uploaded image URL: ", result.info.secure_url);
+                // Store the image URL for later use when creating a post
+                document.getElementById("uploadImageBtn").setAttribute("data-image-url", result.info.secure_url);
                 
-                // Update all elements with data-i18n attribute
-                document.querySelectorAll('[data-i18n]').forEach(element => {
-                    const key = element.getAttribute('data-i18n');
-                    if (translations[lang] && translations[lang][key]) {
-                        element.textContent = translations[lang][key];
-                    }
-                });
-                
-                // Update all placeholder elements with data-i18n-placeholder attribute
-                document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
-                    const key = element.getAttribute('data-i18n-placeholder');
-                    if (translations[lang] && translations[lang][key]) {
-                        element.placeholder = translations[lang][key];
-                    }
-                });
-                
-                // Update the HTML lang attribute
-                document.documentElement.setAttribute('lang', lang);
-                
-                // Save language preference to localStorage
-                localStorage.setItem('preferredLanguage', lang);
-                
-                console.log('Language changed to:', lang);
+                // Show preview
+                const imagePreview = document.getElementById("imagePreview");
+                imagePreview.innerHTML = `<img src="${result.info.secure_url}" class="post-image" alt="Preview">`;
+                imagePreview.classList.remove("hidden");
             }
+        });
+        
+        // Translation system
+        const translations = {
+            en: {
+                siteTitle: "Viratswarup",
+                home: "Home",
+                enigma: "Enigma",
+                feed: "Feed",
+                agnosia: "Agnosia",
+                emulate: "Emulate",
+                welcomeTitle: "Welcome to Viratswarup",
+                welcomeMessage: "Join our community to share your thoughts, connect with others, and explore interesting content.",
+                login: "Login",
+                googleSignIn: "Sign in with Google",
+                communityFeed: "Community Feed",
+                postPlaceholder: "What's on your mind?",
+                uploadImage: "Upload Image",
+                post: "Post",
+                enigmaContent: "This is the Enigma section. Content will be displayed here.",
+                agnosiaContent: "This is the Agnosia section. Content will be displayed here.",
+                emulateContent: "This is the Emulate section. Content will be displayed here.",
+                profile: "Profile",
+                profileContent: "User profile information will be displayed here.",
+                settings: "Settings",
+                settingsContent: "User settings will be displayed here.",
+                latestUpdates: "Latest Updates",
+                latestContent: "Latest updates will be displayed here.",
+                aboutUs: "About Us",
+                aboutContent: "Information about Viratswarup will be displayed here.",
+                contactUs: "Contact Us",
+                contactContent: "Contact information and form will be displayed here.",
+                menu: "Menu",
+                switchLanguage: "Switch Language",
+                selectLanguage: "Select Language",
+                explore: "Explore",
+                account: "Account",
+                company: "Company",
+                copyright: "© 2023 Viratswarup. All rights reserved.",
+                loadingPosts: "Loading posts...",
+                noPosts: "No posts yet. Be the first to post!",
+                logout: "Logout"
+            },
+            hi: {
+                siteTitle: "विराटस्वरूप",
+                home: "होम",
+                enigma: "एनिग्मा",
+                feed: "फ़ीड",
+                agnosia: "अग्नोसिया",
+                emulate: "अनुकरण",
+                welcomeTitle: "विराटस्वरूप में आपका स्वागत है",
+                welcomeMessage: "अपने विचार साझा करने, दूसरों से जुड़ने और दिलचस्प सामग्री का पता लगाने के लिए हमारे समुदाय में शामिल हों।",
+                login: "लॉग इन",
+                googleSignIn: "Google से साइन इन करें",
+                communityFeed: "समुदाय फ़ीड",
+                postPlaceholder: "आपके मन में क्या चल रहा है?",
+                uploadImage: "छवि अपलोड",
+                post: "पो스्ट",
+                enigmaContent: "यह एनिग्मा अनुभाग है। सामग्री यहां प्रदर्शित की जाएगी।",
+                agnosiaContent: "यह अग्नोसिया अनुभाग है। सामग्री यहां प्रदर्शित की जाएगी।",
+                emulateContent: "यह अनुकरण अनुभाग है। सामग्री यहां प्रदर्शित की जाएगी।",
+                profile: "प्रोफाइल",
+                profileContent: "उपयोगकर्ता प्रोफ़ाइल जानकारी यहां प्रदर्शित की जाएगी।",
+                settings: "सेटिंग्स",
+                settingsContent: "उपयोगकर्ता सेटिंग्स यहां प्रदर्शित की जाएगी।",
+                latestUpdates: "नवीनतम अपडेट",
+                latestContent: "नवीनतम अपडेट यहां प्रदर्शित किए जाएंगे।",
+                aboutUs: "हमारे बारे में",
+                aboutContent: "विराटस्वरूप के बारे में जानकारी यहां प्रदर्शित की जाएगी।",
+                contactUs: "संपर्क करें",
+                contactContent: "संपर्क जानकारी और फ़ॉर्म यहां प्रदर्शित किया जाएगा।",
+                menu: "मेनू",
+                switchLanguage: "भाषा बदलें",
+                selectLanguage: "भाषा चुनें",
+                explore: "अन्वेषण",
+                account: "खाता",
+                company: "कंपनी",
+                copyright: "© 2023 विराटस्वरूप। सर्वाधिकार सुरक्षित।",
+                loadingPosts: "पोस्ट लोड हो रहे हैं...",
+                noPosts: "अभी तक कोई पोस्ट नहीं। पहली पोस्ट बनाने वाले बनें!",
+                logout: "लॉग आउट"
+            },
+            ne: {
+                siteTitle: "विराटस्वरूप",
+                home: "गृह",
+                enigma: "एनिग्मा",
+                feed: "फिड",
+                agnosia: "अग्नोसिया",
+                emulate: "अनुकरण",
+                welcomeTitle: "विराटस्वरूपमा स्वागत छ",
+                welcomeMessage: "आफ्ना विचारहरू साझा गर्न, अरूसँग जडान गर्न र रोचक सामग्रीहरू अन्वेषण गर्न हाम्रो समुदायमा सामेल हुनुहोस्।",
+                login: "लग इन",
+                googleSignIn: "Google मार्फत साइन इन गर्नुहोस्",
+                communityFeed: "समुदाय फिड",
+                postPlaceholder: "तपाईको मनमा के छ?",
+                uploadImage: "तस्विर अपलोड गर्नुहोस्",
+                post: "पोस्ट",
+                enigmaContent: "यो एनिग्मा खण्ड हो। सामग्री यहाँ प्रदर्शन गरिनेछ।",
+                agnosiaContent: "यो अग्नोसिया खण्ड हो। सामग्री यहाँ प्रदर्शन गरिनेछ।",
+                emulateContent: "यो अनुकरण खण्ड हो। सामग्री यहाँ प्रदर्शन गरिनेछ।",
+                profile: "प्रोफाइल",
+                profileContent: "प्रयोगकर्ता प्रोफाइल जानकारी यहाँ प्रदर्शन गरिनेछ।",
+                settings: "सेटिङहरू",
+                settingsContent: "प्रयोगकर्ता सेटिङहरू यहाँ प्रदर्शन गरिनेछ।",
+                latestUpdates: "नवीनतम अपडेटहरू",
+                latestContent: "नवीनतम अपडेटहरू यहाँ प्रदर्शन गरिनेछ।",
+                aboutUs: "हाम्रो बारेमा",
+                aboutContent: "विराटस्वरूपको बारेमा जानकारी यहाँ प्रदर्शन गरिनेछ।",
+                contactUs: "हामीलाई सम्पर्क गर्नुहोस्",
+                contactContent: "सम्पर्क जानकारी र फारम यहाँ प्रदर्शन गरिनेछ।",
+                menu: "मेनु",
+                switchLanguage: "भाषा परिवर्तन गर्नुहोस्",
+                selectLanguage: "भाषा चयन गर्नुहोस्",
+                explore: "अन्वेषण",
+                account: "खाता",
+                company: "कम्पनी",
+                copyright: "© २०२३ विराटस्वरूप। सर्वाधिकार सुरक्षित।",
+                loadingPosts: "पोस्टहरू लोड हुँदैछन्...",
+                noPosts: "अहिले सम्म कुनै पोस्ट छैन। पहिलो पोस्ट सिर्जना गर्नुहोस्!",
+                logout: "लग आउट"
+            }
+        };
+
+        // Set the default language
+        let currentLanguage = 'en';
+        
+        // Function to change language
+        function changeLanguage(lang) {
+            currentLanguage = lang;
             
-            // DOM Elements
-            const mobileMenuBtn = document.getElementById("mobileMenuBtn");
-            const closeMenuBtn = document.getElementById("closeMenuBtn");
-            const mobileMenu = document.getElementById("mobileMenu");
-            const languageBtn = document.getElementById("languageBtn");
-            const mobileLanguageBtn = document.getElementById("mobileLanguageBtn");
-            const closeLanguageBtn = document.getElementById("closeLanguageBtn");
-            const languagePopup = document.getElementById("languagePopup");
-            const pages = document.querySelectorAll(".page");
-            const navItems = document.querySelectorAll(".nav-item, .mobile-nav-item, .footer-links-list a");
-            const loginBtn = document.getElementById("loginBtn");
-            const googleLoginBtn = document.getElementById("googleLoginBtn");
-            const uploadImageBtn = document.getElementById("uploadImageBtn");
-            
-            // Show mobile menu
-            mobileMenuBtn.addEventListener("click", () => {
-                mobileMenu.classList.add("active");
+            // Update all elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (translations[lang] && translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
             });
             
-            // Hide mobile menu
-            closeMenuBtn.addEventListener("click", () => {
-                mobileMenu.classList.remove("active");
+            // Update all placeholder elements with data-i18n-placeholder attribute
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+                const key = element.getAttribute('data-i18n-placeholder');
+                if (translations[lang] && translations[lang][key]) {
+                    element.placeholder = translations[lang][key];
+                }
             });
             
-            // Show language popup
-            languageBtn.addEventListener("click", () => {
-                languagePopup.classList.add("active");
-            });
+            // Update the HTML lang attribute
+            document.documentElement.setAttribute('lang', lang);
             
-            mobileLanguageBtn.addEventListener("click", (e) => {
-                e.preventDefault();
-                mobileMenu.classList.remove("active");
-                languagePopup.classList.add("active");
-            });
-            
-            // Hide language popup
-            closeLanguageBtn.addEventListener("click", () => {
+            // Save language preference to localStorage
+            localStorage.setItem('preferredLanguage', lang);
+        }
+        
+        // DOM Elements
+        const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+        const closeMenuBtn = document.getElementById("closeMenuBtn");
+        const mobileMenu = document.getElementById("mobileMenu");
+        const languageBtn = document.getElementById("languageBtn");
+        const mobileLanguageBtn = document.getElementById("mobileLanguageBtn");
+        const closeLanguageBtn = document.getElementById("closeLanguageBtn");
+        const languagePopup = document.getElementById("languagePopup");
+        const pages = document.querySelectorAll(".page");
+        const navItems = document.querySelectorAll(".nav-item, .mobile-nav-item, .footer-links-list a");
+        const loginBtn = document.getElementById("loginBtn");
+        const googleLoginBtn = document.getElementById("googleLoginBtn");
+        const uploadImageBtn = document.getElementById("uploadImageBtn");
+        const postSubmitBtn = document.getElementById("postSubmitBtn");
+        const postsContainer = document.getElementById("postsContainer");
+        const userInfo = document.getElementById("userInfo");
+        const userName = document.getElementById("userName");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const mobileLogoutBtn = document.getElementById("mobileLogoutBtn");
+        
+        // Show mobile menu
+        mobileMenuBtn.addEventListener("click", () => {
+            mobileMenu.classList.add("active");
+        });
+        
+        // Hide mobile menu
+        closeMenuBtn.addEventListener("click", () => {
+            mobileMenu.classList.remove("active");
+        });
+        
+        // Show language popup
+        languageBtn.addEventListener("click", () => {
+            languagePopup.classList.add("active");
+        });
+        
+        mobileLanguageBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            mobileMenu.classList.remove("active");
+            languagePopup.classList.add("active");
+        });
+        
+        // Hide language popup
+        closeLanguageBtn.addEventListener("click", () => {
+            languagePopup.classList.remove("active");
+        });
+        
+        // Change language
+        const languageOptions = document.querySelectorAll(".language-option");
+        languageOptions.forEach(option => {
+            option.addEventListener("click", () => {
+                const selectedLang = option.getAttribute("data-lang");
+                changeLanguage(selectedLang);
                 languagePopup.classList.remove("active");
             });
-            
-            // Change language
-            const languageOptions = document.querySelectorAll(".language-option");
-            languageOptions.forEach(option => {
-                option.addEventListener("click", () => {
-                    const selectedLang = option.getAttribute("data-lang");
-                    changeLanguage(selectedLang);
-                    languagePopup.classList.remove("active");
-                });
+        });
+        
+        // Navigation between pages
+        navItems.forEach(item => {
+            item.addEventListener("click", (e) => {
+                e.preventDefault();
+                const pageId = item.getAttribute("data-page");
+                showPage(pageId);
+                
+                // Close mobile menu if open
+                if (mobileMenu.classList.contains("active")) {
+                    mobileMenu.classList.remove("active");
+                }
+            });
+        });
+        
+        // Show specific page
+        function showPage(pageId) {
+            pages.forEach(page => {
+                page.classList.remove("active");
             });
             
-            // Navigation between pages
-            navItems.forEach(item => {
-                item.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    const pageId = item.getAttribute("data-page");
-                    showPage(pageId);
-                    
-                    // Close mobile menu if open
-                    if (mobileMenu.classList.contains("active")) {
-                        mobileMenu.classList.remove("active");
-                    }
-                });
-            });
-            
-            // Show specific page
-            function showPage(pageId) {
-                pages.forEach(page => {
-                    page.classList.remove("active");
-                });
-                
-                const targetPage = document.getElementById(`${pageId}-page`);
-                if (targetPage) {
-                    targetPage.classList.add("active");
-                }
-                
-                // If user is not authenticated and trying to access protected pages
-                if (pageId !== "welcome" && pageId !== "home" && !firebase.auth.currentUser) {
-                    showPage("welcome");
-                    alert("Please login first");
-                    return;
-                }
-                
-                // Load posts if feed page is shown
-                if (pageId === "feed" && firebase.auth.currentUser) {
-                    loadPosts();
-                }
+            const targetPage = document.getElementById(`${pageId}-page`);
+            if (targetPage) {
+                targetPage.classList.add("active");
             }
             
-            // Firebase Authentication
-            loginBtn.addEventListener("click", () => {
-                // Implement email/password login
-                alert("Email/password login would be implemented here");
-            });
+            // If user is not authenticated and trying to access protected pages
+            if (pageId !== "welcome" && pageId !== "home" && !auth.currentUser) {
+                showPage("welcome");
+                alert("Please login first");
+                return;
+            }
             
-            googleLoginBtn.addEventListener("click", () => {
-                const provider = new firebase.GoogleAuthProvider();
-                firebase.signInWithPopup(firebase.auth, provider)
-                    .then((result) => {
-                        // User signed in
-                        showPage("feed");
-                    })
-                    .catch((error) => {
-                        console.error("Authentication error: ", error);
-                    });
-            });
-            
-            // Check auth state
-            firebase.auth.onAuthStateChanged(user => {
-                if (user) {
+            // Load posts if feed page is shown
+            if (pageId === "feed" && auth.currentUser) {
+                loadPosts();
+            }
+        }
+        
+        // Firebase Authentication
+        loginBtn.addEventListener("click", () => {
+            // Implement email/password login
+            alert("Email/password login would be implemented here");
+        });
+        
+        googleLoginBtn.addEventListener("click", () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    // User signed in
                     showPage("feed");
-                } else {
-                    showPage("welcome");
-                }
-            });
-            
-            // Cloudinary image upload
-            uploadImageBtn.addEventListener("click", () => {
-                cloudinaryWidget.open();
-            });
-            
-            // Create a new post
-            const postSubmitBtn = document.querySelector(".post-submit");
-            if (postSubmitBtn) {
-                postSubmitBtn.addEventListener("click", () => {
-                    const postText = document.querySelector(".post-input").value;
-                    const imageUrl = uploadImageBtn.getAttribute("data-image-url");
-                    
-                    if (!postText.trim() && !imageUrl) {
-                        alert("Please add text or an image to your post");
-                        return;
-                    }
-                    
-                    // Add post to Firestore
-                    firebase.addDoc(firebase.collection(firebase.db, "posts"), {
-                        text: postText,
-                        imageUrl: imageUrl || null,
-                        userId: firebase.auth.currentUser.uid,
-                        userDisplayName: firebase.auth.currentUser.displayName,
-                        timestamp: firebase.serverTimestamp(),
-                        likes: 0,
-                        dislikes: 0,
-                        comments: []
-                    })
-                    .then(() => {
-                        document.querySelector(".post-input").value = "";
-                        uploadImageBtn.removeAttribute("data-image-url");
-                        alert("Post created successfully!");
-                        loadPosts();
-                    })
-                    .catch(error => {
-                        console.error("Error creating post: ", error);
-                    });
+                })
+                .catch((error) => {
+                    console.error("Authentication error: ", error);
+                    alert("Authentication failed: " + error.message);
                 });
+        });
+        
+        // Logout functionality
+        logoutBtn.addEventListener("click", () => {
+            auth.signOut();
+        });
+        
+        mobileLogoutBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            auth.signOut();
+            mobileMenu.classList.remove("active");
+        });
+        
+        // Check auth state
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // User is signed in
+                userInfo.style.display = "flex";
+                userName.textContent = user.displayName || "User";
+                mobileLogoutBtn.style.display = "block";
+                showPage("feed");
+            } else {
+                // User is signed out
+                userInfo.style.display = "none";
+                mobileLogoutBtn.style.display = "none";
+                showPage("welcome");
+            }
+        });
+        
+        // Cloudinary image upload
+        uploadImageBtn.addEventListener("click", () => {
+            cloudinaryWidget.open();
+        });
+        
+        // Create a new post
+        postSubmitBtn.addEventListener("click", () => {
+            const postText = document.querySelector(".post-input").value;
+            const imageUrl = uploadImageBtn.getAttribute("data-image-url");
+            
+            if (!postText.trim() && !imageUrl) {
+                alert("Please add text or an image to your post");
+                return;
             }
             
-            // Load posts from Firestore
-            function loadPosts() {
-                const postsContainer = document.querySelector(".posts-container");
-                postsContainer.innerHTML = "<p>Loading posts...</p>";
-                
-                const q = firebase.query(firebase.collection(firebase.db, "posts"), firebase.orderBy("timestamp", "desc"));
-                
-                firebase.onSnapshot(q, (querySnapshot) => {
+            // Add post to Firestore
+            db.collection("posts").add({
+                text: postText,
+                imageUrl: imageUrl || null,
+                userId: auth.currentUser.uid,
+                userDisplayName: auth.currentUser.displayName || "Anonymous",
+                userEmail: auth.currentUser.email,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                likes: 0,
+                dislikes: 0,
+                comments: []
+            })
+            .then(() => {
+                document.querySelector(".post-input").value = "";
+                uploadImageBtn.removeAttribute("data-image-url");
+                const imagePreview = document.getElementById("imagePreview");
+                imagePreview.innerHTML = "";
+                imagePreview.classList.add("hidden");
+                loadPosts();
+            })
+            .catch(error => {
+                console.error("Error creating post: ", error);
+                alert("Error creating post: " + error.message);
+            });
+        });
+        
+        // Load posts from Firestore
+        function loadPosts() {
+            postsContainer.innerHTML = `<div class="loading">${translations[currentLanguage].loadingPosts}</div>`;
+            
+            db.collection("posts")
+                .orderBy("timestamp", "desc")
+                .get()
+                .then(querySnapshot => {
                     postsContainer.innerHTML = "";
                     
                     if (querySnapshot.empty) {
-                        postsContainer.innerHTML = "<p>No posts yet. Be the first to post!</p>";
+                        postsContainer.innerHTML = `<p>${translations[currentLanguage].noPosts}</p>`;
                         return;
                     }
                     
-                    querySnapshot.forEach((doc) => {
+                    querySnapshot.forEach(doc => {
                         const post = doc.data();
                         const postElement = document.createElement("div");
                         postElement.className = "post";
+                        
+                        // Format the timestamp
+                        let postTime = "";
+                        if (post.timestamp) {
+                            const date = post.timestamp.toDate();
+                            postTime = date.toLocaleString();
+                        }
                         
                         postElement.innerHTML = `
                             <div class="post-header">
                                 <div class="user-avatar">${post.userDisplayName ? post.userDisplayName.charAt(0).toUpperCase() : "U"}</div>
                                 <div>
                                     <div class="user-name">${post.userDisplayName || "Unknown User"}</div>
-                                    <div class="post-time">${post.timestamp ? new Date(post.timestamp.toDate()).toLocaleString() : ""}</div>
+                                    <div class="post-time">${postTime}</div>
                                 </div>
                             </div>
                             <div class="post-content">
@@ -1165,51 +1231,53 @@
                     document.querySelectorAll(".dislike-btn").forEach(btn => {
                         btn.addEventListener("click", () => dislikePost(btn.getAttribute("data-id")));
                     });
-                }, (error) => {
+                })
+                .catch(error => {
                     console.error("Error loading posts: ", error);
-                    postsContainer.innerHTML = "<p>Error loading posts. Please try again later.</p>";
+                    postsContainer.innerHTML = `<div class="error-message">Error loading posts. Please try again later.</div>`;
                 });
+        }
+        
+        // Like a post
+        function likePost(postId) {
+            if (!auth.currentUser) {
+                alert("Please login to like posts");
+                return;
             }
             
-            // Like a post
-            function likePost(postId) {
-                if (!firebase.auth.currentUser) {
-                    alert("Please login to like posts");
-                    return;
-                }
-                
-                const postRef = firebase.doc(firebase.db, "posts", postId);
-                firebase.updateDoc(postRef, {
-                    likes: firebase.increment(1)
-                })
-                .then(() => {
-                    loadPosts();
-                })
-                .catch(error => {
-                    console.error("Error liking post: ", error);
-                });
+            const postRef = db.collection("posts").doc(postId);
+            postRef.update({
+                likes: firebase.firestore.FieldValue.increment(1)
+            })
+            .then(() => {
+                loadPosts();
+            })
+            .catch(error => {
+                console.error("Error liking post: ", error);
+            });
+        }
+        
+        // Dislike a post
+        function dislikePost(postId) {
+            if (!auth.currentUser) {
+                alert("Please login to dislike posts");
+                return;
             }
             
-            // Dislike a post
-            function dislikePost(postId) {
-                if (!firebase.auth.currentUser) {
-                    alert("Please login to dislike posts");
-                    return;
-                }
-                
-                const postRef = firebase.doc(firebase.db, "posts", postId);
-                firebase.updateDoc(postRef, {
-                    dislikes: firebase.increment(1)
-                })
-                .then(() => {
-                    loadPosts();
-                })
-                .catch(error => {
-                    console.error("Error disliking post: ", error);
-                });
-            }
-            
-            // Initialize the app
+            const postRef = db.collection("posts").doc(postId);
+            postRef.update({
+                dislikes: firebase.firestore.FieldValue.increment(1)
+            })
+            .then(() => {
+                loadPosts();
+            })
+            .catch(error => {
+                console.error("Error disliking post: ", error);
+            });
+        }
+        
+        // Initialize the app
+        document.addEventListener("DOMContentLoaded", () => {
             // Load language preference from localStorage if available
             const savedLanguage = localStorage.getItem('preferredLanguage');
             if (savedLanguage && translations[savedLanguage]) {
@@ -1220,7 +1288,7 @@
             }
             
             // Check if user is logged in
-            if (firebase.auth.currentUser) {
+            if (auth.currentUser) {
                 showPage("feed");
             } else {
                 showPage("welcome");
